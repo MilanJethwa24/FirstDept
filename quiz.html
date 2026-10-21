@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QuizBlitz – General Knowledge Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ============ 1. BASE / THEME ============ */
+  :root {
+    --bg: #0e1420;
+    --panel: #16202f;
+    --panel-2: #1d2a3d;
+    --line: #2b3b52;
+    --text: #eef3fb;
+    --muted: #93a4bd;
+    --brand: #ffb43d;
+    --brand-dark: #b57a17;
+    --good: #3ecf8e;
+    --bad: #f2637a;
+    --radius: 18px;
+    --shadow: 0 24px 60px rgba(0, 0, 0, .45);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(900px 500px at 12% -8%, #21344f 0%, transparent 60%),
+      radial-gradient(700px 400px at 92% 108%, #2c2340 0%, transparent 60%),
+      var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 16px;
+  }
+
+  h1, h2, .q-num, .score-pill, .opt-key {
+    font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+  }
+
+  /* ============ 2. CARD SHELL ============ */
+  .card {
+    width: 100%;
+    max-width: 660px;
+    background: linear-gradient(180deg, var(--panel) 0%, #131c29 100%);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 30px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  .brand .dot {
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    background: linear-gradient(140deg, var(--brand), #ff7a3d);
+    display: grid;
+    place-items: center;
+    color: #171106;
+    font-weight: 700;
+    font-family: "Space Grotesk", sans-serif;
+  }
+  .brand b { letter-spacing: .3px; font-family: "Space Grotesk", sans-serif; }
+  .brand span { color: var(--muted); font-size: 14px; }
+
+  .screen { display: none; }
+  .screen.active { display: block; animation: fade .35s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  /* ============ 3. START SCREEN ============ */
+  .hero h1 { font-size: 34px; line-height: 1.15; margin-bottom: 12px; }
+  .hero h1 em { color: var(--brand); font-style: normal; }
+  .hero p { color: var(--muted); line-height: 1.6; max-width: 46ch; }
+
+  .rules {
+    display: grid;
+    gap: 10px;
+    margin: 22px 0 26px;
+  }
+  .rules div {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 15px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .rules div i {
+    font-style: normal;
+    color: var(--brand);
+    font-weight: 700;
+    font-family: "Space Grotesk", sans-serif;
+  }
+
+  /* ============ 4. BUTTONS ============ */
+  .btn {
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    padding: 13px 24px;
+    transition: transform .12s ease, filter .12s ease, background .12s ease;
+  }
+  .btn-primary { background: var(--brand); color: #171106; }
+  .btn-primary:hover { filter: brightness(1.08); transform: translateY(-2px); }
+  .btn-ghost { background: transparent; color: var(--text); border-color: var(--line); }
+  .btn-ghost:hover { background: var(--panel-2); }
+  .btn:disabled { cursor: not-allowed; opacity: .55; transform: none; }
+
+  /* ============ 5. QUIZ SCREEN ============ */
+  .meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .q-num { font-size: 14px; color: var(--muted); letter-spacing: .6px; text-transform: uppercase; }
+  .score-pill {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 14px;
+  }
+  .score-pill b { color: var(--brand); }
+
+  .track {
+    height: 7px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .track > span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, #ff7a3d, var(--brand));
+    transition: width .4s ease;
+  }
+
+  .question { font-size: 23px; line-height: 1.35; margin-bottom: 20px; }
+
+  .options { display: grid; gap: 11px; }
+  .opt {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    padding: 14px 15px;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, transform .1s ease;
+  }
+  .opt:hover:not(:disabled) { border-color: var(--brand); transform: translateX(3px); }
+  .opt:disabled { cursor: default; }
+  .opt-key {
+    flex: 0 0 auto;
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: #101a27;
+    border: 1px solid var(--line);
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .opt.correct { border-color: var(--good); background: rgba(62, 207, 142, .12); }
+  .opt.correct .opt-key { color: var(--good); border-color: var(--good); }
+  .opt.wrong { border-color: var(--bad); background: rgba(242, 99, 122, .12); }
+  .opt.wrong .opt-key { color: var(--bad); border-color: var(--bad); }
+  .opt.dim { opacity: .5; }
+
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 22px;
+    min-height: 48px;
+  }
+  .verdict { font-size: 15px; font-weight: 600; }
+  .verdict.ok { color: var(--good); }
+  .verdict.no { color: var(--bad); }
+  .verdict.idle { color: var(--muted); font-weight: 400; }
+
+  /* ============ 6. RESULT SCREEN ============ */
+  .result-top { text-align: center; margin-bottom: 8px; }
+  .ring {
+    width: 132px; height: 132px;
+    margin: 6px auto 16px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background:
+      conic-gradient(var(--brand) calc(var(--pct) * 1%), #22303f 0);
+    position: relative;
+  }
+  .ring::after {
+    content: "";
+    position: absolute;
+    inset: 11px;
+    background: #131c29;
+    border-radius: 50%;
+  }
+  .ring span {
+    position: relative;
+    z-index: 1;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 30px;
+    font-weight: 700;
+  }
+  .ring span small { display: block; font-size: 12px; color: var(--muted); font-weight: 500; }
+  .result-top h2 { font-size: 26px; margin-bottom: 6px; }
+  .result-top p { color: var(--muted); }
+
+  .review { margin: 24px 0 20px; border-top: 1px solid var(--line); }
+  .review h3 {
+    font-size: 13px;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 16px 0 10px;
+  }
+  .review ol { list-style: none; display: grid; gap: 9px; }
+  .review li {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--good);
+    border-radius: 11px;
+    padding: 11px 13px;
+    font-size: 14.5px;
+  }
+  .review li.miss { border-left-color: var(--bad); }
+  .review li b { display: block; margin-bottom: 4px; font-weight: 600; }
+  .review li span { color: var(--muted); }
+  .review li span.hit { color: var(--good); }
+  .review li span.missTxt { color: var(--bad); }
+
+  .result-actions { display: flex; gap: 12px; justify-content: center; }
+
+  @media (max-width: 560px) {
+    .card { padding: 22px; }
+    .hero h1 { font-size: 27px; }
+    .question { font-size: 19px; }
+    .result-actions { flex-direction: column; }
+    .btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="brand">
+    <div class="dot">Q</div>
+    <b>QuizBlitz</b>
+    <span>· general knowledge</span>
+  </div>
+
+  <!-- ============ START ============ -->
+  <section id="startScreen" class="screen active hero">
+    <h1>Ten questions.<br />One <em>score</em>.</h1>
+    <p>Answer each question, get instant feedback, then see your final result with a full breakdown of what you got right and wrong.</p>
+    <div class="rules">
+      <div><i>01</i> One question is shown at a time</div>
+      <div><i>02</i> Pick one of four answers (or press 1–4)</div>
+      <div><i>03</i> No going back — next question after each answer</div>
+    </div>
+    <button class="btn btn-primary" id="startBtn">Start the quiz</button>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section id="quizScreen" class="screen">
+    <div class="meta">
+      <div class="q-num">Question <span id="qNo">1</span> of <span id="qTotal">10</span></div>
+      <div class="score-pill">Score <b id="liveScore">0</b></div>
+    </div>
+    <div class="track"><span id="bar"></span></div>
+
+    <h2 class="question" id="questionText">…</h2>
+    <div class="options" id="options"></div>
+
+    <div class="footer">
+      <div class="verdict idle" id="verdict">Choose an answer</div>
+      <button class="btn btn-primary" id="nextBtn" disabled>Next question</button>
+    </div>
+  </section>
+
+  <!-- ============ RESULT ============ -->
+  <section id="resultScreen" class="screen">
+    <div class="result-top">
+      <div class="ring" id="ring" style="--pct:0">
+        <span><span id="pctText">0</span>%<small id="rawText">0 / 10</small></span>
+      </div>
+      <h2 id="gradeTitle">…</h2>
+      <p id="gradeNote">…</p>
+    </div>
+
+    <div class="review">
+      <h3>Answer review</h3>
+      <ol id="reviewList"></ol>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn btn-primary" id="againBtn">Play again</button>
+      <button class="btn btn-ghost" id="homeBtn">Back to start</button>
+    </div>
+  </section>
+</div>
+
+<script>
+/* =========================================================
+   1. DATA — the question bank.
+   Add or edit questions freely; the rest of the app adapts.
+   ========================================================= */
+const QUESTIONS = [
+  {
+    q: "Which planet is known as the Red Planet?",
+    options: ["Venus", "Mars", "Jupiter", "Mercury"],
+    answer: 1
+  },
+  {
+    q: "What is the largest ocean on Earth?",
+    options: ["Atlantic", "Indian", "Arctic", "Pacific"],
+    answer: 3
+  },
+  {
+    q: "Which language runs natively inside every web browser?",
+    options: ["Python", "Java", "JavaScript", "C++"],
+    answer: 2
+  },
+  {
+    q: "How many continents are there on Earth?",
+    options: ["Five", "Six", "Seven", "Eight"],
+    answer: 2
+  },
+  {
+    q: "What does the acronym HTTP stand for?",
+    options: [
+      "HyperText Transfer Protocol",
+      "High Transfer Text Protocol",
+      "HyperText Transmission Process",
+      "Home Tool Transfer Protocol"
+    ],
+    answer: 0
+  },
+  {
+    q: "Who painted the Mona Lisa?",
+    options: ["Vincent van Gogh", "Pablo Picasso", "Michelangelo", "Leonardo da Vinci"],
+    answer: 3
+  },
+  {
+    q: "What is the smallest country in the world?",
+    options: ["Monaco", "Vatican City", "Malta", "San Marino"],
+    answer: 1
+  },
+  {
+    q: "Which of these is NOT a primary colour of light?",
+    options: ["Red", "Green", "Blue", "Yellow"],
+    answer: 3
+  },
+  {
+    q: "In computing, how many bytes make up one kilobyte?",
+    options: ["100", "512", "1024", "2048"],
+    answer: 2
+  },
+  {
+    q: "Which gas do plants mainly absorb from the atmosphere?",
+    options: ["Oxygen", "Nitrogen", "Carbon dioxide", "Hydrogen"],
+    answer: 2
+  }
+];
+
+/* =========================================================
+   2. STATE — everything the app remembers while running.
+   ========================================================= */
+const state = {
+  index: 0,        // which question we are on
+  score: 0,        // running score
+  picked: null,    // index the user clicked for the current question
+  locked: false,   // true = already answered, ignore further clicks
+  log: []          // one record per question, for the final review
+};
+
+/* =========================================================
+   3. ELEMENT SHORTCUTS
+   ========================================================= */
+const el = {
+  start: document.getElementById("startScreen"),
+  quiz: document.getElementById("quizScreen"),
+  result: document.getElementById("resultScreen"),
+  startBtn: document.getElementById("startBtn"),
+  nextBtn: document.getElementById("nextBtn"),
+  againBtn: document.getElementById("againBtn"),
+  homeBtn: document.getElementById("homeBtn"),
+  qNo: document.getElementById("qNo"),
+  qTotal: document.getElementById("qTotal"),
+  liveScore: document.getElementById("liveScore"),
+  bar: document.getElementById("bar"),
+  questionText: document.getElementById("questionText"),
+  options: document.getElementById("options"),
+  verdict: document.getElementById("verdict"),
+  ring: document.getElementById("ring"),
+  pctText: document.getElementById("pctText"),
+  rawText: document.getElementById("rawText"),
+  gradeTitle: document.getElementById("gradeTitle"),
+  gradeNote: document.getElementById("gradeNote"),
+  reviewList: document.getElementById("reviewList")
+};
+
+/* =========================================================
+   4. HELPERS
+   ========================================================= */
+// Show exactly one screen at a time.
+function showScreen(node) {
+  [el.start, el.quiz, el.result].forEach(s => s.classList.remove("active"));
+  node.classList.add("active");
+}
+
+// Build the option buttons for the current question.
+function renderOptions(question) {
+  el.options.innerHTML = "";
+  const keys = ["A", "B", "C", "D", "E", "F"];
+
+  question.options.forEach((text, i) => {
+    const btn = document.createElement("button");
+    btn.className = "opt";
+    btn.type = "button";
+
+    const key = document.createElement("span");
+    key.className = "opt-key";
+    key.textContent = keys[i] || (i + 1);
+
+    const label = document.createElement("span");
+    label.textContent = text;
+
+    btn.append(key, label);
+    btn.addEventListener("click", () => pick(i));
+    el.options.appendChild(btn);
+  });
+}
+
+// Paint the question, the counter and the progress bar.
+function renderQuestion() {
+  const q = QUESTIONS[state.index];
+  const done = state.index;                       // questions already finished
+
+  el.qNo.textContent = state.index + 1;
+  el.questionText.textContent = q.q;
+  el.liveScore.textContent = state.score;
+  el.bar.style.width = (done / QUESTIONS.length) * 100 + "%";
+
+  state.picked = null;
+  state.locked = false;
+  el.nextBtn.disabled = true;
+  el.nextBtn.textContent =
+    state.index === QUESTIONS.length - 1 ? "See result" : "Next question";
+
+  el.verdict.textContent = "Choose an answer";
+  el.verdict.className = "verdict idle";
+
+  renderOptions(q);
+}
+
+/* =========================================================
+   5. GAME LOGIC
+   ========================================================= */
+function startQuiz() {
+  state.index = 0;
+  state.score = 0;
+  state.log = [];
+  el.qTotal.textContent = QUESTIONS.length;
+  showScreen(el.quiz);
+  renderQuestion();
+}
+
+// Called when the user clicks an option.
+function pick(i) {
+  if (state.locked) return;                        // only one answer per question
+  state.locked = true;
+  state.picked = i;
+
+  const q = QUESTIONS[state.index];
+  const correct = i === q.answer;
+  const buttons = [...el.options.children];
+
+  if (correct) {
+    state.score++;
+    el.verdict.textContent = "Correct — well done";
+    el.verdict.className = "verdict ok";
+  } else {
+    el.verdict.textContent = "Not quite — the answer was " + q.options[q.answer];
+    el.verdict.className = "verdict no";
+  }
+
+  // Mark the chosen and the right button, then freeze them.
+  buttons.forEach((btn, idx) => {
+    btn.disabled = true;
+    if (idx === q.answer) btn.classList.add("correct");
+    else if (idx === i) btn.classList.add("wrong");
+    else btn.classList.add("dim");
+  });
+
+  el.liveScore.textContent = state.score;
+  el.nextBtn.disabled = false;
+
+  // Remember this question for the final review.
+  state.log.push({
+    q: q.q,
+    chosen: q.options[i],
+    correct: q.options[q.answer],
+    ok: correct
+  });
+}
+
+// Move on, or finish the quiz.
+function next() {
+  if (state.index < QUESTIONS.length - 1) {
+    state.index++;
+    renderQuestion();
+  } else {
+    showResult();
+  }
+}
+
+// Grade the run and draw the result screen.
+function showResult() {
+  const total = QUESTIONS.length;
+  const pct = Math.round((state.score / total) * 100);
+
+  el.ring.style.setProperty("--pct", pct);
+  el.pctText.textContent = pct;
+  el.rawText.textContent = state.score + " / " + total;
+
+  let title, note;
+  if (pct === 100)      { title = "Perfect score";  note = "Ten out of ten — nothing slipped past you."; }
+  else if (pct >= 80)   { title = "Sharp work";     note = "Strong run. Just a couple to brush up on."; }
+  else if (pct >= 50)   { title = "Solid effort";   note = "Halfway there — the review below shows what to revisit."; }
+  else if (pct >= 30)   { title = "Worth another go"; note = "A few tricky ones. Try again and watch the review."; }
+  else                  { title = "Rough round";    note = "Check the answers below, then run it again."; }
+
+  el.gradeTitle.textContent = title;
+  el.gradeNote.textContent = note;
+
+  // Build the per-question review list.
+  el.reviewList.innerHTML = "";
+  state.log.forEach(item => {
+    const li = document.createElement("li");
+    if (!item.ok) li.className = "miss";
+
+    const head = document.createElement("b");
+    head.textContent = item.q;
+
+    const line = document.createElement("span");
+    if (item.ok) {
+      line.className = "hit";
+      line.textContent = "Your answer: " + item.chosen;
+    } else {
+      line.className = "missTxt";
+      line.textContent = "You said: " + item.chosen + "  ·  Correct: " + item.correct;
+    }
+
+    li.append(head, line);
+    el.reviewList.appendChild(li);
+  });
+
+  el.bar.style.width = "100%";
+  showScreen(el.result);
+}
+
+/* =========================================================
+   6. EVENTS
+   ========================================================= */
+el.startBtn.addEventListener("click", startQuiz);
+el.nextBtn.addEventListener("click", next);
+el.againBtn.addEventListener("click", startQuiz);
+el.homeBtn.addEventListener("click", () => showScreen(el.start));
+
+// Nice touch: press 1–4 to answer, Enter to move on.
+document.addEventListener("keydown", e => {
+  if (!el.quiz.classList.contains("active")) return;
+
+  if (e.key >= "1" && e.key <= "9") {
+    const idx = Number(e.key) - 1;
+    const btns = el.options.children;
+    if (idx < btns.length && !state.locked) btns[idx].click();
+  } else if (e.key === "Enter" && !el.nextBtn.disabled) {
+    next();
+  }
+});
+</script>
+</body>
+</html>
